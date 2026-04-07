@@ -134,7 +134,7 @@ jobs:
           echo "Deploying container on local server..."
           docker run -d --name $RULE_NAME \
           -e RULE_NAME=$RULE_ID \
-          -e RULE_VERSION=$RULE_VERSION \
+          -e RULE_VERSION=1.0.0 \
           -e RAW_HISTORY_DATABASE=raw_history \
           -e RAW_HISTORY_DATABASE_HOST=10.10.80.37 \
           -e RAW_HISTORY_DATABASE_PORT=5432 \
@@ -161,6 +161,10 @@ jobs:
           -e ACK_POLICY=Explicit \
           -e PRODUCER_STORAGE=File \
           -e PRODUCER_RETENTION_POLICY=Workqueue \
+          -e REDIS_HOST="10.10.80.37" \
+          -e REDIS_PORT="6379" \
+          -e REDIS_PASSWORD="redis-password" \
+          -e REDIS_AUTH= \
           --restart unless-stopped $ORG/$RULE_NAME:latest
           
           echo "Container deployed successfully."
