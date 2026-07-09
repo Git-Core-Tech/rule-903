@@ -63,8 +63,6 @@ jobs:
         run: |
           echo "Modifying rule-executer-$RULE_NAME files..."
 
-          sed -E -i 's|"rule": "npm:@[^/]+/rule-placeholder@latest"|"rule": "npm:@'"$ORG"'/'"$RULE_NAME"'@latest"|g' rule-executer-$RULE_NAME/package.json
-
           sed -i "s/placeholder/$RULE_ID/" rule-executer-$RULE_NAME/Dockerfile
 
           sed -i '/^FROM node/a\ARG GH_TOKEN' rule-executer-$RULE_NAME/Dockerfile

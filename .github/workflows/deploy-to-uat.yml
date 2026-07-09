@@ -59,8 +59,6 @@ jobs:
       - name: Modify Rule Executer Files
         run: |
           echo "Modifying rule-executer-$RULE_NAME files..."
-          # Update rule dependency to use @latest
-          sed -i 's|"rule": "npm:@psl-copilot/rule-placeholder@latest"|"rule": "npm:@psl-copilot/'"$RULE_NAME"'@latest"|g' rule-executer-$RULE_NAME/package.json
 
           # Update rule number in Dockerfile
           sed -i "s/placeholder/$RULE_ID/" rule-executer-$RULE_NAME/Dockerfile
