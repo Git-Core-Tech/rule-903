@@ -33,7 +33,7 @@ jobs:
       - name: Clone Rule Executer Repo
         run: |
           echo "Cloning Rule Executer repo and removing package-lock.json file..."
-          git clone https://github.com/tazama-lf/rule-executer -b feat-paysys
+          git clone https://github.com/tazama-lf/rule-executer -b feat-paysys-poc
           cd rule-executer 
           rm -f package-lock.json
           cd ..
@@ -70,6 +70,12 @@ jobs:
           sed -i '/^RUN npm ci/i\RUN echo "@tazama-lf:registry=https://npm.pkg.github.com" > /root/.npmrc && \\\n    echo "@psl-copilot:registry=https://npm.pkg.github.com" >> /root/.npmrc && \\\n    echo "//npm.pkg.github.com/:_authToken=${GH_TOKEN}" >> /root/.npmrc\n' rule-executer-$RULE_NAME/Dockerfile
           echo "Successfully modified rule-executer-$RULE_NAME files."
           
+      - name: Update Rule Dependency Name
+        run: |
+          echo "Updating rule dependency to rule-$RULE_ID..."
+          sed -E -i 's|("rule": "npm:@[^/]+/rule-)[^@"]+(@[^"]+")|\1'"$RULE_ID"'\2|g' rule-executer-$RULE_NAME/package.json
+          echo "Rule dependency updated."
+
       # Verify Changes in modified files
       - name: Verify Changes
         run: |

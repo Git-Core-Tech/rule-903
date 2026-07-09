@@ -36,7 +36,7 @@ jobs:
       - name: Clone Rule Executer Repo
         run: |
           echo "Cloning Rule Executer repo and removing package-lock.json file..."
-          git clone https://github.com/tazama-lf/rule-executer -b feat-paysys
+          git clone https://github.com/tazama-lf/rule-executer -b feat-paysys-poc
           cd rule-executer 
           rm -f package-lock.json
           cd ..
@@ -76,6 +76,12 @@ jobs:
             npm ci --ignore-scripts|' rule-executer-$RULE_NAME/Dockerfile
 
           echo "Successfully modified rule-executer-$RULE_NAME files."
+
+      - name: Update Rule Dependency Name
+        run: |
+          echo "Updating rule dependency to rule-$RULE_ID..."
+          sed -E -i 's|("rule": "npm:@[^/]+/rule-)[^@"]+(@[^"]+")|\1'"$RULE_ID"'\2|g' rule-executer-$RULE_NAME/package.json
+          echo "Rule dependency updated."
 
       # Verify Changes in modified files
       - name: Verify Changes
@@ -136,32 +142,32 @@ jobs:
           -e RULE_NAME=$RULE_ID \
           -e RULE_VERSION=1.0.0 \
           -e RAW_HISTORY_DATABASE=raw_history \
-          -e RAW_HISTORY_DATABASE_HOST=10.10.80.18 \
+          -e RAW_HISTORY_DATABASE_HOST=10.10.80.35 \
           -e RAW_HISTORY_DATABASE_PORT=15432 \
           -e RAW_HISTORY_DATABASE_USER=postgres \
           -e RAW_HISTORY_DATABASE_PASSWORD=unused \
           -e RAW_HISTORY_DATABASE_CERT_PATH=/usr/local/share/ca-certificates/ca-certificates.crt \
           -e CONFIGURATION_DATABASE=configuration \
-          -e CONFIGURATION_DATABASE_HOST=10.10.80.18 \
+          -e CONFIGURATION_DATABASE_HOST=10.10.80.35 \
           -e CONFIGURATION_DATABASE_PORT=15432 \
           -e CONFIGURATION_DATABASE_USER=postgres \
           -e CONFIGURATION_DATABASE_PASSWORD=unused \
           -e CONFIGURATION_DATABASE_CERT_PATH=/usr/local/share/ca-certificates/ca-certificates.crt \
           -e EVENT_HISTORY_DATABASE=event_history \
-          -e EVENT_HISTORY_DATABASE_HOST=10.10.80.18 \
+          -e EVENT_HISTORY_DATABASE_HOST=10.10.80.35 \
           -e EVENT_HISTORY_DATABASE_PORT=15432 \
           -e EVENT_HISTORY_DATABASE_USER=postgres \
           -e EVENT_HISTORY_DATABASE_PASSWORD=unused \
           -e EVENT_HISTORY_DATABASE_CERT_PATH=/usr/local/share/ca-certificates/ca-certificates.crt \
           -e STARTUP_TYPE=nats \
-          -e SERVER_URL=10.10.80.18:14222 \
+          -e SERVER_URL=10.10.80.35:14222 \
           -e PRODUCER_STREAM= \
           -e CONSUMER_STREAM= \
           -e STREAM_SUBJECT= \
           -e ACK_POLICY=Explicit \
           -e PRODUCER_STORAGE=File \
           -e PRODUCER_RETENTION_POLICY=Workqueue \
-          -e REDIS_HOST="10.10.80.18" \
+          -e REDIS_HOST="10.10.80.35" \
           -e REDIS_PORT="6379" \
           -e REDIS_PASSWORD="redis-password" \
           -e REDIS_AUTH= \
