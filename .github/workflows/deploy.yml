@@ -63,7 +63,11 @@ jobs:
         run: |
           echo "Modifying rule-executer-$RULE_NAME files..."
 
-          sed -i '1i# syntax=docker/dockerfile:1.4' rule-executer-$RULE_NAME/Dockerfile
+          if grep -q '^# syntax=docker/dockerfile:' rule-executer-$RULE_NAME/Dockerfile; then
+            sed -i '0,/^# syntax=docker\/dockerfile:/s|^# syntax=docker/dockerfile:.*|# syntax=docker/dockerfile:1.4|' rule-executer-$RULE_NAME/Dockerfile
+          else
+            sed -i '1i# syntax=docker/dockerfile:1.4' rule-executer-$RULE_NAME/Dockerfile
+          fi
 
           sed -i "s/placeholder/$RULE_ID/" rule-executer-$RULE_NAME/Dockerfile
 
