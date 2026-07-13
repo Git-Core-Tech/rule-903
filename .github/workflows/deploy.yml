@@ -59,27 +59,34 @@ jobs:
           echo "RULE_ID=$RULE_ID" >> $GITHUB_ENV
           echo "Normalized RULE_ID=$RULE_ID"
 
-      - name: Modify Rule Executer Files
+      - name: Modify Rule Executer Dockerfile
+        shell: bash
         run: |
-          echo "Modifying rule-executer-$RULE_NAME files..."
+          set -euo pipefail
 
-          if grep -q '^# syntax=docker/dockerfile:' rule-executer-$RULE_NAME/Dockerfile; then
-            sed -i '0,/^# syntax=docker\/dockerfile:/s|^# syntax=docker/dockerfile:.*|# syntax=docker/dockerfile:1.4|' rule-executer-$RULE_NAME/Dockerfile
-          else
-            sed -i '1i# syntax=docker/dockerfile:1.4' rule-executer-$RULE_NAME/Dockerfile
-          fi
+          DOCKERFILE="rule-executer-$RULE_NAME/Dockerfile"
 
-          sed -i "s/placeholder/$RULE_ID/" rule-executer-$RULE_NAME/Dockerfile
+          echo "Patching $DOCKERFILE..."
 
-          # Replace RUN npm ci with npm auth + npm ci using a BuildKit secret
-          sed -i 's|^[[:space:]]*RUN npm ci.*|RUN --mount=type=secret,id=GH_TOKEN GH_TOKEN="$(cat /run/secrets/GH_TOKEN)" \&\& \\ \
-            test -n "$GH_TOKEN" \&\& \\ \
-            echo "@tazama-lf:registry=https://npm.pkg.github.com" > /root/.npmrc \&\& \\ \
-            echo "@'"$ORG"':registry=https://npm.pkg.github.com" >> /root/.npmrc \&\& \\ \
-            echo "//npm.pkg.github.com/:_authToken=${GH_TOKEN}" >> /root/.npmrc \&\& \\ \
-            npm ci --ignore-scripts|' rule-executer-$RULE_NAME/Dockerfile
+          # Ensure BuildKit syntax supported by the self-hosted runner.
+          sed -i '/^# syntax=docker\/dockerfile:/d' "$DOCKERFILE"
+          sed -i '1i# syntax=docker/dockerfile:1.4' "$DOCKERFILE"
 
-          echo "Successfully modified rule-executer-$RULE_NAME files."
+          # Replace rule placeholder.
+          sed -i "s/placeholder/$RULE_ID/g" "$DOCKERFILE"
+
+          # Fix builder installation.
+          sed -i \
+            's|RUN --mount=type=secret,id=GH_TOKEN,env=GH_TOKEN npm ci --ignore-scripts|RUN --mount=type=secret,id=GH_TOKEN,required=true GH_TOKEN="$(cat /run/secrets/GH_TOKEN)" npm ci --ignore-scripts|' \
+            "$DOCKERFILE"
+
+          # Fix production dependency installation.
+          sed -i \
+            's|RUN --mount=type=secret,id=GH_TOKEN,env=GH_TOKEN npm ci --omit=dev --ignore-scripts|RUN --mount=type=secret,id=GH_TOKEN,required=true GH_TOKEN="$(cat /run/secrets/GH_TOKEN)" npm ci --omit=dev --ignore-scripts|' \
+            "$DOCKERFILE"
+
+          echo "Dockerfile after patch:"
+          grep -n -A2 -B2 'npm ci' "$DOCKERFILE"
 
       - name: Update Rule Dependency Name
         run: |
@@ -97,16 +104,20 @@ jobs:
       
       # Configure npm for GitHub Packages
       - name: Configure npm for GitHub Packages
-        run: |
-          export NPMRC_PATH="$HOME/.npmrc"
-          echo "@tazama-lf:registry=https://npm.pkg.github.com" >>  "$NPMRC_PATH"
-          echo "@$ORG:registry=https://npm.pkg.github.com" >> "$NPMRC_PATH"
-          echo "//npm.pkg.github.com/:_authToken=${GH_TOKEN}" >> "$NPMRC_PATH"
-
-          echo "=== ACTIVE npmrc ==="
-          cat "$NPMRC_PATH"
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.TAZAMA_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          cat > "$HOME/.npmrc" <<EOF
+          @tazama-lf:registry=https://npm.pkg.github.com
+          @$ORG:registry=https://npm.pkg.github.com
+          //npm.pkg.github.com/:_authToken=\${GH_TOKEN}
+          always-auth=true
+          EOF
+
+          cp "$HOME/.npmrc" "rule-executer-$RULE_NAME/.npmrc"
 
       - name: Generate package-lock.json for Docker build
         run: |
@@ -134,12 +145,15 @@ jobs:
 
       # Step 6: Build Docker Image and Deploy Container Locally
       - name: Build Docker Image and Deploy Container Locally
+        shell: bash
         run: |
+          set -euo pipefail
+
           echo "Building Docker image locally on self-hosted runner..."
           docker build \
-          --secret id=GH_TOKEN,env=GH_TOKEN \
-          -t $ORG/$RULE_NAME:latest \
-          rule-executer-$RULE_NAME
+            --secret id=GH_TOKEN,env=GH_TOKEN \
+            -t "$ORG/$RULE_NAME:latest" \
+            "rule-executer-$RULE_NAME"
           echo "Docker Image build complete."
           
           echo "Stopping and removing existing container if running..."
