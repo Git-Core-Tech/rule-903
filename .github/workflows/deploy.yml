@@ -63,12 +63,14 @@ jobs:
         run: |
           echo "Modifying rule-executer-$RULE_NAME files..."
 
+          sed -i '1i# syntax=docker/dockerfile:1.4' rule-executer-$RULE_NAME/Dockerfile
+
           sed -i "s/placeholder/$RULE_ID/" rule-executer-$RULE_NAME/Dockerfile
 
-          sed -i '/^FROM node/a\ARG GH_TOKEN' rule-executer-$RULE_NAME/Dockerfile
-
-          # Replace RUN npm ci with npm auth + npm ci
-          sed -i 's|^[[:space:]]*RUN npm ci.*|RUN echo "@tazama-lf:registry=https://npm.pkg.github.com" > /root/.npmrc \&\& \\ \
+          # Replace RUN npm ci with npm auth + npm ci using a BuildKit secret
+          sed -i 's|^[[:space:]]*RUN npm ci.*|RUN --mount=type=secret,id=GH_TOKEN GH_TOKEN="$(cat /run/secrets/GH_TOKEN)" \&\& \\ \
+            test -n "$GH_TOKEN" \&\& \\ \
+            echo "@tazama-lf:registry=https://npm.pkg.github.com" > /root/.npmrc \&\& \\ \
             echo "@'"$ORG"':registry=https://npm.pkg.github.com" >> /root/.npmrc \&\& \\ \
             echo "//npm.pkg.github.com/:_authToken=${GH_TOKEN}" >> /root/.npmrc \&\& \\ \
             npm ci --ignore-scripts|' rule-executer-$RULE_NAME/Dockerfile
@@ -130,7 +132,10 @@ jobs:
       - name: Build Docker Image and Deploy Container Locally
         run: |
           echo "Building Docker image locally on self-hosted runner..."
-          docker build --build-arg GH_TOKEN=${GH_TOKEN} -t $ORG/$RULE_NAME:latest rule-executer-$RULE_NAME
+          docker build \
+          --secret id=GH_TOKEN,env=GH_TOKEN \
+          -t $ORG/$RULE_NAME:latest \
+          rule-executer-$RULE_NAME
           echo "Docker Image build complete."
           
           echo "Stopping and removing existing container if running..."
