@@ -70,8 +70,10 @@ jobs:
           
       - name: Update Rule Dependency Name
         run: |
-          echo "Updating rule dependency to rule-$RULE_ID..."
-          sed -E -i 's|("rule": "npm:@[^/]+/rule-)[^@"]+(@[^"]+")|\1'"$RULE_ID"'\2|g' rule-executer-$RULE_NAME/package.json
+          echo "Updating rule dependency to @psl-copilot/$RULE_NAME@latest..."
+          cd rule-executer-$RULE_NAME
+          npm pkg delete dependencies.rule
+          npm pkg set "dependencies.rule=npm:@psl-copilot/$RULE_NAME@latest"
           echo "Rule dependency updated."
 
       # Verify Changes in modified files
