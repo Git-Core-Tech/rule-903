@@ -16,11 +16,11 @@ jobs:
       github.actor != 'dependabot-preview[bot]' &&
       (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
     runs-on:
-    - ${{ vars.RUNNER_LABEL || 'server-35' }}
+    - ${{ vars.RUNNER_LABEL || 'server-18' }}
     env:
       RULE_NAME: ${{ github.event.repository.name }}
       ORG: ${{ github.repository_owner }}
-      SERVER_IP: ${{ vars.SERVER_IP || '10.10.80.35' }}
+      SERVER_IP: ${{ vars.SERVER_IP || '10.10.80.18' }}
 
     steps:
       # Step 1: Checkout repository
